@@ -5,7 +5,7 @@ C_FLAGS = -fPIC -shared
 all: libhelpers.so clean_o
 
 libhelpers.so:
-	$(CC) -o libhelpers.so $(C_FLAGS) helpers.c helpers.h
+	$(CC) -o libhelpers.so $(C_FLAGS) $(SRC)
 
 clean_o:
 	rm -rf *.o
