@@ -31,16 +31,9 @@ int main() {
             print_err();
         }
 
-        // small hack to produce output like in example
-        if (space) {
-            write_(STDOUT_FILENO, &space, 1);
-        }
-        reverse(buffer, buffer + n - 1);
-        if (buffer[0] == ' ') {
-            n = write_(STDOUT_FILENO, buffer + 1, n - 1);
-        } else {
-            n = write_(STDOUT_FILENO, buffer, n);
-        }
+        // reverse only word
+        reverse(buffer, buffer + n - 1 - (buffer[n - 1] == ' '));
+        n = write_(STDOUT_FILENO, buffer, n);
         if (n == -1) {
             print_err();
         }
