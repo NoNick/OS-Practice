@@ -1,4 +1,6 @@
 #include <unistd.h>
+#include <stdlib.h>
+#include <string.h>
 #include <helpers.h>
 
 const int BLOCK_SIZE = 4096;
@@ -21,9 +23,7 @@ int main(int argc, char *argv[]) {
         spawn_argv[i] = argv[i + 1];
     }
 
-    int n, ret_code;
-    spawn_argv[argc - 1] = malloc(BLOCK_SIZE);
-    spawn_argv[argc] = NULL;
+    int n;
     char last;
     do {
         i = argc - 1;
@@ -46,9 +46,10 @@ int main(int argc, char *argv[]) {
 
         if (spawn(command, spawn_argv) == 0) {
             for (i = argc - 1; spawn_argv[i] != NULL; i++) {
-                printf("%s ", spawn_argv[i]);
+                write_(STDOUT_FILENO, spawn_argv[i], strlen(spawn_argv[i]));
+                write_(STDOUT_FILENO, " ", 1);
             }
-            printf("\n");
+            write_(STDOUT_FILENO, "\n", 1);
         }
     } while(n > 0);
 
