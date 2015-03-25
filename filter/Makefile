@@ -1,6 +1,6 @@
 CC = gcc
 SRC = filter.c
-C_FLAGS = -fPIC -L../lib -I../lib -lhelpers -g
+C_FLAGS = -fPIC -L../lib -I../lib -lhelpers
 
 all: filter
 
