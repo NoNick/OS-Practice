@@ -5,7 +5,7 @@ C_FLAGS = -fPIC -L../lib/ -I../lib/ -lhelpers
 all: cat
 
 cat:
-	$(CC) -o cat $(C_FLAGS) $(SRC)
+	$(CC) -o cat $(SRC) $(C_FLAGS)
 
 clean:
 	rm -rf cat
