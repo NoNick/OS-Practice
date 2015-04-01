@@ -1,11 +1,15 @@
 CC = gcc
-SRC = helpers.h helpers.c
+SRC_HELPERS = helpers.h helpers.c
+SRC_BUFIO = bufio.h bufio.c
 C_FLAGS = -fPIC -shared
 
-all: libhelpers.so clean_o
+all: libhelpers.so libbufio.so clean_o
 
 libhelpers.so:
-	$(CC) -o libhelpers.so $(C_FLAGS) $(SRC)
+	$(CC) -o libhelpers.so $(SRC_HELPERS) $(C_FLAGS)
+
+libbufio.so:
+	$(CC) -o libbufio.so $(SRC_BUFIO) $(C_FLAGS) -L. -lhelpers
 
 clean_o:
 	rm -rf *.o
