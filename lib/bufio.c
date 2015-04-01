@@ -66,5 +66,5 @@ ssize_t buf_flush(int fd, struct buf_t *buf, size_t required) {
     }
 #endif
 
-    return write_(fd, buf, required);
+    return write_(fd, buf->data, required);
 }
