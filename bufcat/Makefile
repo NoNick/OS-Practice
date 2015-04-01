@@ -4,7 +4,7 @@ C_FLAGS = -fPIC -L../lib -I../lib -lbufio -lhelpers -g
 
 all: bufcat
 
-bufcat:
+bufcat: $(SRC)
 	$(CC) -o bufcat $(SRC) $(C_FLAGS)
 
 clean:

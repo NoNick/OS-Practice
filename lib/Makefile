@@ -5,10 +5,10 @@ C_FLAGS = -fPIC -shared
 
 all: libhelpers.so libbufio.so clean_o
 
-libhelpers.so:
+libhelpers.so: $(SRC_HELPERS)
 	$(CC) -o libhelpers.so $(SRC_HELPERS) $(C_FLAGS)
 
-libbufio.so:
+libbufio.so: $(SRC_BUFIO)
 	$(CC) -o libbufio.so $(SRC_BUFIO) $(C_FLAGS) -L. -lhelpers
 
 clean_o:
