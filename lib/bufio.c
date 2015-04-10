@@ -87,6 +87,7 @@ ssize_t buf_getline(int fd, struct buf_t *buf, char* dest) {
             dest[dest_pos++] = buf->data[buf->pos++];
             if (buf->data[buf->pos] == '\n') {
                 buf->pos++;
+                dest[dest_pos] = '\0';
                 return dest_pos;
             }
 

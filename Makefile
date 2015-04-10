@@ -4,6 +4,7 @@ all:
 	make -C revwords/
 	make -C filter/
 	make -C bufcat/
+	make -C foreach/
 
 clean:
 	make clean -C lib/
@@ -11,3 +12,4 @@ clean:
 	make clean -C revwords/
 	make clean -C filter/
 	make clean -C bufcat/
+	make clean -C foreach/
