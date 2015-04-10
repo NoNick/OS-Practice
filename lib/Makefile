@@ -1,7 +1,7 @@
 CC = gcc
 SRC_HELPERS = helpers.h helpers.c
 SRC_BUFIO = bufio.h bufio.c
-C_FLAGS = -fPIC -shared
+C_FLAGS = -fPIC -shared -g
 
 all: libhelpers.so libbufio.so clean_o
 

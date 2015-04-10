@@ -12,6 +12,7 @@ struct buf_t* buf_new(size_t capacity) {
     struct buf_t *result = malloc(sizeof(struct buf_t));
     result->capacity = capacity;
     result->size = 0;
+    result->pos = 0;
     result->data = new_data;
     return result;
 }
@@ -54,7 +55,12 @@ ssize_t buf_fill(int fd, struct buf_t *buf, size_t required) {
     }
 #endif
 
-    int result = read_(fd, buf->data, required);
+    buf->pos = 0;
+    size_t result = 0, tmp;
+    while (result < required &&
+           (tmp = read(fd, buf->data + result, buf->capacity - result)) > 0) {
+        result += tmp;
+    }
     buf->size = result >= 0 ? result : 0;
     return result;
 }
@@ -67,4 +73,25 @@ ssize_t buf_flush(int fd, struct buf_t *buf, size_t required) {
 #endif
 
     return write_(fd, buf->data, required);
+}
+
+ssize_t buf_getline(int fd, struct buf_t *buf, char* dest) {
+#ifdef DEBUG
+    if (buf == NULL || dest == NULL) {
+        abort();
+    }
+#endif
+    size_t dest_pos = 0;
+    do {
+        while (buf->pos != buf->size) {
+            dest[dest_pos++] = buf->data[buf->pos++];
+            if (buf->data[buf->pos] == '\n') {
+                buf->pos++;
+                return dest_pos;
+            }
+
+        }
+    } while (buf_fill(fd, buf, 1) > 0);
+
+    return dest_pos;
 }
