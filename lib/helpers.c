@@ -73,10 +73,10 @@ int spawn(const char * file, char * const argv []) {
         wait(&status);
         return status;
     } else {
-//        int devNull = open("/dev/null", O_WRONLY);
-//        dup2(devNull, STDOUT_FILENO);
-//        dup2(devNull, STDERR_FILENO);
+        int devNull = open("/dev/null", O_WRONLY);
+        dup2(devNull, STDOUT_FILENO);
+        dup2(devNull, STDERR_FILENO);
         execvp(file, argv);
-//        close(devNull);
+        close(devNull);
     }
 }
