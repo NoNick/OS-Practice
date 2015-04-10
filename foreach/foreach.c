@@ -15,6 +15,9 @@ int main(int argc, char *argv[]) {
     }
 
     struct buf_t* buffer = buf_new(BLOCK_SIZE);
+    if (buffer->data == NULL) {
+        return 1;
+    }
     char dest[BLOCK_SIZE];
     char *command = argv[1];
     char *spawn_argv[ARGS_N];
@@ -34,7 +37,7 @@ int main(int argc, char *argv[]) {
             continue;
         }
         if (n <= 0) {
-            return 0;
+            return 1;
         }
 
         char old_dest[BLOCK_SIZE];
