@@ -3,11 +3,21 @@
 
 #include <sys/types.h>
 
-ssize_t read_(int fd, void *buf, size_t count);
-ssize_t write_(int fd, const void *buf, size_t count);
-ssize_t read_until(int fd, void * buf, size_t count, char delimiter);
-ssize_t read_until2(int fd, void * buf, size_t count, char *delimiters);
-int spawn(const char * file, char * const argv []);
+struct execargs_t {
+    char *argv, *name;
+    int stdin, stdout, stderr;
+};
+
+struct execargs_t* execargs(char*);
+void exec_free(struct execargs_t*);
+int exec(struct execargs_t*);
+int runpiped(struct execargs_t**, size_t);
+ 
+ssize_t read_(int, void*, size_t);
+ssize_t write_(int, const void*, size_t);
+ssize_t read_until(int, void*, size_t, char);
+ssize_t read_until2(int, void*, size_t, char*);
+int spawn(const char*, char * const *);
 
 char _delimiter;
 char *_delimiters;
