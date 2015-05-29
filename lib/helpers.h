@@ -4,7 +4,7 @@
 #include <sys/types.h>
 
 struct execargs_t {
-    char *argv, *name;
+    char **argv, *name;
     int stdin, stdout, stderr;
 };
 

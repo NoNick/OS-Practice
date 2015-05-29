@@ -17,12 +17,22 @@ struct execargs_t* execargs(char *str) {
     result->stdin = STDIN_FILENO;
     result->stdout = STDOUT_FILENO;
     result->stderr = STDERR_FILENO;
+    char *ptr;
 
-    result->name = strtok(str, " \t\n");
+    result->name = strtok_r(str, " \t\n", &ptr);
     if (result->name == NULL) {
 	result->name = str;
     }
-    result->argv = strtok(NULL, "\n");
+
+    int cnt = 0;
+    result->argv = malloc(sizeof(char*) * EXECV_MAX);
+    memset(result->argv, 0, sizeof(char*) * EXECV_MAX);
+    result->argv[cnt++] = result->name;
+    char *next = strtok_r(NULL, " \t\n", &ptr);
+    while (next != NULL) {
+	result->argv[cnt++] = next;
+	next = strtok_r(NULL, " \t\n", &ptr);
+    }
     
     return result;
 }
@@ -37,28 +47,17 @@ void killall() {
     }
 }
 	    
-void int_handler(int sig) {
-    if (sig == SIGINT) {
-	killall();
-    }
-}
-
 void exec_free(struct execargs_t *args) {
     free(args->argv);
 }
 
 int exec(struct execargs_t* args) {
-    if (args->name[0] == '\n') {
-	return 0;
-    }
-    
     if (args->stdin != STDIN_FILENO &&
 	dup2(args->stdin, STDIN_FILENO) == -1) {
 	return -4;
     }
     if (args->stdout != STDOUT_FILENO &&
 	dup2(args->stdout, STDOUT_FILENO) == -1) {
-	write(STDOUT_FILENO, "Oops!\n", 7);
 	return -3;
     }
     if (args->stderr != STDERR_FILENO &&
@@ -66,30 +65,18 @@ int exec(struct execargs_t* args) {
 	return -2;
 	}
     
-    int ret;
-    if (args->argv == NULL) {
-	ret = execlp(args->name, args->name, (char*)NULL);
-    } else {
-	ret = execlp(args->name, args->name, args->argv, (char*)NULL);
-    }
-    if (ret == -1) {
+    if (execvp(args->name, args->argv) == -1) {
 	return -1;
     }
     return 0;
 }
 
 int runpiped(struct execargs_t **programs, size_t n) {
-    int fd[2], end_pipe, i, ret, pids[n], cnt = 0;
+    int fd[2], end_pipe, i, ret, pids[n];
     proc = pids;
-    cnt = n;
-    cnt = 0;
+    proc_cnt = 0;
     struct execargs_t *arg = programs[0];
-    struct sigaction new_act, old_act;
-    new_act.sa_handler = int_handler;
-    new_act.sa_flags = 0;
-    sigemptyset(&new_act.sa_mask);
-    sigaction(SIGINT, &new_act, &old_act);
-    
+
     for (i = 0; i < n; i++, arg = programs[i]) {       
 	if (i > 0) {
 	    arg->stdin = end_pipe;
@@ -105,15 +92,17 @@ int runpiped(struct execargs_t **programs, size_t n) {
 	    if (i < n - 1) {
 	        close(fd[0]);
 	    }
-	    if (exec(arg) < 0) {		
+	    if (exec(arg) < 0) {
+		proc_cnt--;
 		_exit(1);
 	    }
+	    _exit(0);
 	}
 	if (ret == -1) {
 	    return -1;
 	}
 	
-	pids[cnt++] = ret;
+	pids[proc_cnt++] = ret;
 	if (i > 0) {
 	    close(end_pipe);
 	}
@@ -123,9 +112,10 @@ int runpiped(struct execargs_t **programs, size_t n) {
 	end_pipe = fd[0];
     }
 
-    for (i = 0; i < n; i++) {
-	waitpid(pids[i]);
+    for (i = 0; i < proc_cnt; i++) {
+	waitpid(pids[i], NULL, 0);
     }
+    proc_cnt = 0;
 
     return 0;
 }
