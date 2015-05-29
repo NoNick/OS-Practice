@@ -74,6 +74,7 @@ char* readln(int fd) {
 	    break;
 	}
     }
+    result[i] = '\0';
     pos = i;
     memmove(buf, buf + pos, size - pos);
     size -= pos;
@@ -87,6 +88,7 @@ int main() {
     new_act.sa_flags = 0;
     sigemptyset(&new_act.sa_mask);
     sigaction(SIGINT, &new_act, &old_act);
+    sigaction(SIGPIPE, &new_act, &old_act);
 
     char *line = (char*)1;
     while(line != NULL || sigint) {
