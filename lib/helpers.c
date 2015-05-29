@@ -185,7 +185,7 @@ ssize_t read_until(int fd, void * buf, size_t count, char delimiter) {
 
 ssize_t read_until2(int fd, void * buf, size_t count, char *delimiters) {
     _delimiters = delimiters;
-    _read_until(fd, buf, count, &cmp_plural);
+    return _read_until(fd, buf, count, &cmp_plural);
 }
 
 int spawn(const char * file, char * const argv []) {
