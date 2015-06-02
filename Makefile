@@ -6,6 +6,7 @@ all:
 	make -C bufcat/
 	make -C simplesh/
 	make -C filesender/
+	make -C bipiper/
 
 clean:
 	make clean -C lib/
@@ -15,3 +16,4 @@ clean:
 	make clean -C bufcat/
 	make clean -C simplesh/
 	make clean -C filesender/
+	make clean -C bipiper/
