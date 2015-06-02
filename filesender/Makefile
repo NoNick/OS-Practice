@@ -1,6 +1,6 @@
 CC = gcc
 SRC = filesender.c
-C_FLAGS = -fPIC -L../lib -I../lib -lbufio -lhelpers -g -O0
+C_FLAGS = -fPIC -L../lib -I../lib -lbufio -lhelpers
 
 all: filesender
 

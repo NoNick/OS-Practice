@@ -5,7 +5,6 @@
 #include <string.h>
 #include <errno.h>
 #include <bufio.h>
-#include <stdio.h>
 
 const int BUF_SIZE = 4096;
 
