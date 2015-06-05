@@ -1,3 +1,5 @@
+#define _GNU_SOURCE
+
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <netdb.h>
@@ -124,21 +126,30 @@ void initPipes(int fd1, int fd2) {
     assert(next != -1, "no more empty ufds\n");
     
     ufds[next * 2].fd = fd1;
-    ufds[next * 2].events = POLLIN | POLLPRI;
+    ufds[next * 2].events = POLLIN | POLLPRI | POLLRDHUP;
     assert((bufs[next * 2] = buf_new(BUF_SIZE)) != NULL, NULL);
     ufds[next * 2 + 1].fd = fd2;
-    ufds[next * 2 + 1].events = POLLIN | POLLPRI;    
+    ufds[next * 2 + 1].events = POLLIN | POLLPRI | POLLRDHUP;
     assert((bufs[next * 2 + 1] = buf_new(BUF_SIZE)) != NULL, NULL);
     clients++;
 }
 
 void deletePipes(int index) {
-    close(ufds[index * 2].fd);
-    close(ufds[index * 2 + 1].fd);
+    if (ufds[index * 2].fd != -1) {
+	close(ufds[index * 2].fd);
+    }
+    if (ufds[index * 2 + 1].fd != -1) {
+	close(ufds[index * 2 + 1].fd);
+    }
     ufds[index * 2].fd = -1;
     ufds[index * 2 + 1].fd = -1;
-    buf_free(bufs[index * 2]);
-    buf_free(bufs[index * 2 + 1]);
+    if (bufs[index * 2] != NULL) {
+	buf_free(bufs[index * 2]);
+    }
+    if (bufs[index * 2 + 1] != NULL) {
+	buf_free(bufs[index * 2 + 1]);
+    }
+    clients--;
 }
 
 void setEvents(int from, int to) {
@@ -167,6 +178,23 @@ void receivePipe(int from, int to) {
     setEvents(from, to);
 }
 
+void closePipe(int from, int to) {
+    ufds[from].fd = -1;
+    if (ufds[to].fd == -1) {
+	deletePipes(from / 2);
+    } else {
+	shutdown(ufds[to].fd, SHUT_RD);
+    }
+}
+
+int accompany(int i) {
+    if (i % 2) {
+	return i - 1;
+    } else {
+	return i + 1;
+    }
+}
+
 int main(int argc, char **argv) {
     if (argc < 3) {
 	write(STDOUT_FILENO, "Usage: port port\n", 21);
@@ -193,34 +221,28 @@ int main(int argc, char **argv) {
 	    ufds[SERV1].revents = 0;
 	    cli_fd = acceptSafe(ufds[SERV1].fd);
 	    setStateEvent();
-	    pOut("accepted first client\n");
+	    //	    pOut("accepted first client\n");
 	}
 	if (cli_fd != -1 && readReady(ufds[SERV2].revents)) {
 	    ufds[SERV2].revents = 0;
 	    initPipes(cli_fd, acceptSafe(ufds[SERV2].fd));
 	    cli_fd = -1;
 	    setStateEvent();
-	    pOut("accepted second client\n");
+	    //	    pOut("accepted second client\n");
 	}
 	for (i = 0; i < PIPES_MAX; i++) {
 	    if (ufds[i].fd != -1) {
 		if (readReady(ufds[i].revents)) {
-		    int from = i, to;
-		    if (from % 2) {
-			to = from - 1;
-		    } else {
-			to = from + 1;
-		    }
+		    int from = i, to = accompany(i);
 		    sendPipe(from, to);
 		}
 		if (ufds[i].revents & POLLOUT) {
-   		    int to = i, from;
-		    if (to % 2) {
-			from = to - 1;
-		    } else {
-			from = to + 1;
-		    }
+   		    int to = i, from = accompany(i);
 		    receivePipe(from, to);
+		}
+		if (ufds[i].revents & POLLRDHUP) {
+   		    int from = i, to = accompany(i);
+		    closePipe(from, to);
 		}
 	    }
 	    ufds[i].revents = 0;
