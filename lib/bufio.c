@@ -71,8 +71,12 @@ ssize_t buf_flush(int fd, struct buf_t *buf, size_t required) {
         abort();
     }
 #endif
-
-    return write_(fd, buf->data, required);
+    int n;
+    if ((n = write(fd, buf->data, required)) == -1) {
+	return -1;
+    }
+    buf->size -= n;
+    return n;
 }
 
 ssize_t buf_getline(int fd, struct buf_t *buf, char* dest) {
