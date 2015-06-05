@@ -1,7 +1,7 @@
 CC = gcc
 SRC1 = forking.c
 SRC2 = polling.c
-C_FLAGS = -O0 -g -fPIC -L../lib -I../lib -lbufio -lhelpers
+C_FLAGS = -fPIC -L../lib -I../lib -lbufio -lhelpers
 
 all: forking polling
 
