@@ -10,9 +10,7 @@
 #include <poll.h>
 
 #define BUF_SIZE 4096
-#define PIPES_MAX 127
-#define SERV1 PIPES_MAX * 2
-#define SERV2 PIPES_MAX * 2 + 1
+#define PIPES_MAX 2
 struct pollfd ufds[PIPES_MAX * 2 + 2];
 // bufs[i] - data pending to be written to ufds[i].fd
 struct buf_t *bufs[PIPES_MAX * 2];
@@ -100,14 +98,14 @@ int acceptSafe(int sock) {
 
 void setStateEvent() {
     if (clients >= PIPES_MAX) {
-	ufds[SERV1].events = 0;
-	ufds[SERV2].events = 0;
+	ufds[0].events = 0;
+	ufds[1].events = 0;
     } else if (cli_fd == -1) {
-	ufds[SERV1].events = POLLIN | POLLPRI;
-	ufds[SERV2].events = 0;
+	ufds[0].events = POLLIN | POLLPRI;
+	ufds[1].events = 0;
     } else {
-	ufds[SERV1].events = 0;
-	ufds[SERV2].events = POLLIN | POLLPRI;
+	ufds[0].events = 0;
+	ufds[1].events = POLLIN | POLLPRI;
     }
 }
 
@@ -116,44 +114,32 @@ int readReady(int code) {
 }
 
 void initPipes(int fd1, int fd2) {
-    int next = -1, i;
-    for (i = 0; i < PIPES_MAX / 2; i++) {
-	if (ufds[2 * i].fd == -1) {
-	    next = i;
-	    break;
-	}
-    }
-    assert(next != -1, "no more empty ufds\n");
-    
-    ufds[next * 2].fd = fd1;
-    ufds[next * 2].events = POLLIN | POLLPRI | POLLRDHUP;
-    assert((bufs[next * 2] = buf_new(BUF_SIZE)) != NULL, NULL);
-    ufds[next * 2 + 1].fd = fd2;
-    ufds[next * 2 + 1].events = POLLIN | POLLPRI | POLLRDHUP;
-    assert((bufs[next * 2 + 1] = buf_new(BUF_SIZE)) != NULL, NULL);
+    ufds[clients * 2 + 2].fd = fd1;
+    ufds[clients * 2 + 2].events = POLLIN | POLLPRI | POLLRDHUP;
+    assert((bufs[clients * 2] = buf_new(BUF_SIZE)) != NULL, NULL);
+    ufds[clients * 2 + 3].fd = fd2;
+    ufds[clients * 2 + 3].events = POLLIN | POLLPRI | POLLRDHUP;
+    assert((bufs[clients * 2 + 1] = buf_new(BUF_SIZE)) != NULL, NULL);
     clients++;
 }
 
 void deletePipes(int index) {
-    if (ufds[index * 2].fd != -1) {
-	close(ufds[index * 2].fd);
+    int i;
+    for (i = index * 2; i < clients * 2; i++) {
+	ufds[i].fd = ufds[i + 2].fd;
+	ufds[i].events = ufds[i + 2].events;
+	ufds[i].revents = ufds[i + 2].revents;
+	bufs[i - 2] = bufs[i];
     }
-    if (ufds[index * 2 + 1].fd != -1) {
-	close(ufds[index * 2 + 1].fd);
-    }
-    ufds[index * 2].fd = -1;
-    ufds[index * 2 + 1].fd = -1;
-    if (bufs[index * 2] != NULL) {
-	buf_free(bufs[index * 2]);
-    }
-    if (bufs[index * 2 + 1] != NULL) {
-	buf_free(bufs[index * 2 + 1]);
-    }
+    ufds[clients * 2].fd = -1;
+    ufds[clients * 2 + 1].fd = -1;
+    bufs[clients * 2 - 2] = NULL;
+    bufs[clients * 2 - 1] = NULL;
     clients--;
 }
 
 void setEvents(int from, int to) {
-    if (buf_size(bufs[to]) == buf_capacity(bufs[to])) {
+    if (buf_size(bufs[to - 2]) == buf_capacity(bufs[to - 2])) {
 	ufds[from].events &= ~POLLIN;
 	ufds[from].events &= ~POLLPRI;
     } else {
@@ -161,7 +147,7 @@ void setEvents(int from, int to) {
 	ufds[from].events |= POLLPRI;	
     }
     
-    if (buf_size(bufs[to]) == 0) {
+    if (buf_size(bufs[to - 2]) == 0) {
 	ufds[to].events &= ~POLLOUT;
     } else {
 	ufds[to].events |= POLLOUT;
@@ -169,17 +155,23 @@ void setEvents(int from, int to) {
 }
 
 void sendPipe(int from, int to) {
-    int n = buf_fill(ufds[from].fd, bufs[to], 1);
+    int n = buf_fill(ufds[from].fd, bufs[to - 2], 1);
     setEvents(from, to);
 }
 
 void receivePipe(int from, int to) {
-    int n = buf_flush(ufds[to].fd, bufs[to], buf_size(bufs[to]));
+    int n = buf_flush(ufds[to].fd, bufs[to - 2], buf_size(bufs[to - 2]));
     setEvents(from, to);
 }
 
 void closePipe(int from, int to) {
+    close(ufds[from].fd);
     ufds[from].fd = -1;
+    if (bufs[from - 2] != NULL) {
+	buf_free(bufs[from - 2]);
+	bufs[from - 2] = NULL;
+    }
+    
     if (ufds[to].fd == -1) {
 	deletePipes(from / 2);
     } else {
@@ -206,32 +198,37 @@ int main(int argc, char **argv) {
 	ufds[i].fd = -1;
     }
 
-    assert((ufds[SERV1].fd = getServSocket(argv[1])) != -1, NULL);
-    assert((ufds[SERV2].fd = getServSocket(argv[2])) != -1, NULL);
-    ufds[SERV1].events = POLLIN | POLLPRI;
-    ufds[SERV2].events = POLLIN | POLLPRI;
+    assert((ufds[0].fd = getServSocket(argv[1])) != -1, NULL);
+    assert((ufds[1].fd = getServSocket(argv[2])) != -1, NULL);
+    ufds[0].events = POLLIN | POLLPRI;
+    ufds[1].events = POLLIN | POLLPRI;
     setStateEvent();
 
     while (1) {
-	int n = poll(ufds, PIPES_MAX * 2 + 2, -1);
+	int n = poll(ufds, clients * 2 + 2, -1);
 	if (errno == EINTR) {
 	    continue;
 	}
-	if (cli_fd == -1 && readReady(ufds[SERV1].revents)) {
-	    ufds[SERV1].revents = 0;
-	    cli_fd = acceptSafe(ufds[SERV1].fd);
+	if (cli_fd == -1 && readReady(ufds[0].revents)) {
+	    ufds[0].revents = 0;
+	    cli_fd = acceptSafe(ufds[0].fd);
 	    setStateEvent();
 	    //	    pOut("accepted first client\n");
 	}
-	if (cli_fd != -1 && readReady(ufds[SERV2].revents)) {
-	    ufds[SERV2].revents = 0;
-	    initPipes(cli_fd, acceptSafe(ufds[SERV2].fd));
+	if (cli_fd != -1 && readReady(ufds[1].revents)) {
+	    ufds[1].revents = 0;
+	    initPipes(cli_fd, acceptSafe(ufds[1].fd));
 	    cli_fd = -1;
 	    setStateEvent();
 	    //	    pOut("accepted second client\n");
 	}
-	for (i = 0; i < PIPES_MAX; i++) {
+	for (i = 2; i < clients * 2 + 2; i++) {
 	    if (ufds[i].fd != -1) {
+		if (ufds[i].revents & POLLRDHUP) {
+   		    int from = i, to = accompany(i);
+		    closePipe(from, to);
+		    continue;
+		}
 		if (readReady(ufds[i].revents)) {
 		    int from = i, to = accompany(i);
 		    sendPipe(from, to);
@@ -239,10 +236,6 @@ int main(int argc, char **argv) {
 		if (ufds[i].revents & POLLOUT) {
    		    int to = i, from = accompany(i);
 		    receivePipe(from, to);
-		}
-		if (ufds[i].revents & POLLRDHUP) {
-   		    int from = i, to = accompany(i);
-		    closePipe(from, to);
 		}
 	    }
 	    ufds[i].revents = 0;
