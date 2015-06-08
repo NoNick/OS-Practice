@@ -124,13 +124,11 @@ void initPipes(int fd1, int fd2) {
 }
 
 void deletePipes(int index) {
-    int i;
-    for (i = index * 2; i < clients * 2; i++) {
-	ufds[i].fd = ufds[i + 2].fd;
-	ufds[i].events = ufds[i + 2].events;
-	ufds[i].revents = ufds[i + 2].revents;
-	bufs[i - 2] = bufs[i];
-    }
+    ufds[index * 2].fd = ufds[clients * 2].fd;
+    bufs[index * 2 - 2] = bufs[clients * 2 - 2];   
+    ufds[index * 2 + 1].fd = ufds[clients * 2 + 1].fd;
+    bufs[index * 2 - 1] = bufs[clients * 2 - 1];       
+    
     ufds[clients * 2].fd = -1;
     ufds[clients * 2 + 1].fd = -1;
     bufs[clients * 2 - 2] = NULL;
