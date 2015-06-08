@@ -10,7 +10,7 @@
 #include <poll.h>
 
 #define BUF_SIZE 4096
-#define PIPES_MAX 2
+#define PIPES_MAX 127
 struct pollfd ufds[PIPES_MAX * 2 + 2];
 // bufs[i] - data pending to be written to ufds[i].fd
 struct buf_t *bufs[PIPES_MAX * 2];
