@@ -58,10 +58,10 @@ ssize_t buf_fill(int fd, struct buf_t *buf, size_t required) {
     buf->pos = 0;
     size_t result = 0, tmp;
     while (result < required &&
-           (tmp = read(fd, buf->data + result, buf->capacity - result)) > 0) {
+           (tmp = read(fd, buf->data + buf->size + result, buf->capacity - result - buf->size)) > 0) {
         result += tmp;
     }
-    buf->size = result >= 0 ? result : 0;
+    buf->size += result >= 0 ? result : 0;
     return result;
 }
 
