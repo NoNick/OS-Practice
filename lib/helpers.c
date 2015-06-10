@@ -189,15 +189,16 @@ ssize_t read_until2(int fd, void * buf, size_t count, char *delimiters) {
 }
 
 int spawn(const char * file, char * const argv []) {
-    if (fork() != 0) {
+    int pid;
+    if ((pid = fork()) != 0) {
         int status;
-        wait(&status);
+        waitpid(pid, &status, 0);
         return status;
     } else {
         int devNull = open("/dev/null", O_WRONLY);
         dup2(devNull, STDOUT_FILENO);
         dup2(devNull, STDERR_FILENO);
+	close(devNull);
         execvp(file, argv);
-        close(devNull);
     }
 }
